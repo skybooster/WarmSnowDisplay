@@ -80,6 +80,7 @@ static void AfterUpdate(PlayerAnimControl __instance) { /* 你的代码 */ }
 WarmSnowDisplay/
 ├── Plugin.cs                  # 唯一的源代码：插件主体
 ├── WarmSnowDisplay.csproj     # Visual Studio / MSBuild 工程文件
+├── build.sh                   # Ubuntu 一键编译脚本（mcs/mono）
 ├── Libs/                      # 编译用到的 dll（需自己复制，见 Libs/README.md）
 │   └── README.md
 ├── README.md                  # 本文件
@@ -155,41 +156,73 @@ private void OnGUI()
 
 ## 四、环境准备与编译
 
+> **本机（Ubuntu + Steam/Proton）专属说明**
+>
+> 暖雪是 Windows 游戏，在 Ubuntu 上通过 **Proton** 运行。游戏进程是 Windows 进程，
+> 所以：
+> - BepInEx 装 **win_x64 版**（不要装 linux 版）；
+> - 编译直接在 Ubuntu 上用 Mono 完成（见下方「第 3 步」）；
+> - 必须给 Steam 加一条启动项（见下方第 1 步末尾）。
+>
+> 本仓库默认的 Steam 游戏目录（snap 版 Steam）：
+> ```
+> ~/snap/steam/common/.local/share/Steam/steamapps/common/WarmSnow
+> ```
+> 传统版 Steam 一般是 `~/.local/share/Steam/steamapps/common/WarmSnow`，用 `find ~ -maxdepth 8 -type d -name WarmSnow` 能找到。
+
 ### 第 1 步：安装 BepInEx 5 到游戏目录
 
-1. 去 BepInEx 官方发布页下载 **BepInEx 5** 的 Windows x64 版：
+1. 去 BepInEx 官方发布页下载 **BepInEx 5** 的 **Windows x64** 版：
    https://github.com/BepInEx/BepInEx/releases/latest
-   （下载 `BepInEx_win_x64_5.x.x.zip`，**不要**下 6.0 的 pre 版本）
-2. 解压到游戏根目录（`...\steamapps\common\WarmSnow\`），让 `winhttp.dll`、`BepInEx\` 文件夹和游戏 exe 在同一层。
+   （下载 `BepInEx_win_x64_5.x.x.zip`，**不要**下 6.0 的 pre 版本，也不要下 linux 版）
+2. 解压到游戏根目录（Ubuntu：`.../steamapps/common/WarmSnow/`；Windows：`...\steamapps\common\WarmSnow\`），
+   让 `winhttp.dll`、`doorstop_config.ini`、`BepInEx\` 和游戏 exe 在同一层。
 3. 启动一次游戏再退出——BepInEx 会自动生成 `BepInEx\plugins\`、`BepInEx\config\` 等目录，
    并且 `BepInEx\LogOutput.log` 里会出现 BepInEx 的启动日志，说明安装成功。
+
+> **Ubuntu/Proton 额外一步（重要）**：Wine 自带的 winhttp 会优先于游戏的 `winhttp.dll`，
+> 导致 BepInEx 不加载。请在 Steam 里给暖雪设置启动项：
+>
+> ```
+> WINEDLLOVERRIDES="winhttp=n,b" %command%
+> ```
+>
+> 设置方法：Steam 库 → 右键「暖雪」→ 属性 → 通用 → 启动选项。
 
 > 为什么用 5 而不是 6？BepInEx 5 更简单、资料最多，绝大多数 Unity 游戏 Mod 教程都用 5。
 
 ### 第 2 步：复制依赖 dll
 
-按 [Libs/README.md](./Libs/README.md) 把游戏和 BepInEx 的 dll 复制到 `Libs\`。
+按 [Libs/README.md](./Libs/README.md) 把游戏和 BepInEx 的 dll 复制到 `Libs/`。
+（Ubuntu 上游戏 dll 在 `WarmSnow/WarmSnow_Data/Managed/`，BepInEx dll 在 `WarmSnow/BepInEx/core/`。）
 
 ### 第 3 步：编译
 
-任选一种：
+**在 Ubuntu 上（推荐，本仓库已提供脚本）**：先装 Mono 编译器，然后跑 `build.sh`：
+
+```bash
+sudo apt install mono-mcs          # 如果没装过
+./build.sh                          # 生成 bin/WarmSnowDisplay.dll
+```
+
+**在 Windows 上**：任选一种：
 
 - **Visual Studio**：双击 `WarmSnowDisplay.csproj` 打开，选 `Release` 生成，产物在 `bin\Release\WarmSnowDisplay.dll`。
 - **Rider**：直接打开 csproj。
-- **命令行**（装了 .NET Framework 4.8 的 MSBuild）：
+- **MSBuild 命令行**（装了 .NET Framework 4.8）：
 
 ```bat
 msbuild WarmSnowDisplay.csproj /p:Configuration=Release
 ```
 
 > 也可以用 `dotnet build` 吗？不建议——这个 csproj 是老式（非 SDK 风格）的 .NET Framework 工程，
-> `dotnet build` 对它支持不好，请用 Visual Studio / Rider / MSBuild。
+> `dotnet build` 对它支持不好，请用 Visual Studio / Rider / MSBuild（Windows）或 `build.sh`（Ubuntu）。
 
 ### 第 4 步：安装到游戏并测试
 
-1. 把编译出的 `WarmSnowDisplay.dll` 复制到 `BepInEx\plugins\`。
-2. 启动游戏，进一局。左上角应该出现数值悬浮窗，按 F9 可开关。
-3. 若没显示，打开 `BepInEx\LogOutput.log` 搜索 `WarmSnowDisplay` 看报错。
+1. 把编译出的 `WarmSnowDisplay.dll` 复制到游戏目录下的 `BepInEx\plugins\`。
+2. 启动游戏（Ubuntu 记得先设好上面的启动项），进一局。左上角应该出现数值悬浮窗，按 F9 可开关。
+3. 若没显示，打开游戏目录下的 `BepInEx\LogOutput.log` 搜索 `WarmSnowDisplay` 看报错。
 
 ---
 
@@ -199,14 +232,15 @@ msbuild WarmSnowDisplay.csproj /p:Configuration=Release
 
 | 步骤 | 操作 |
 |------|------|
-| 1 | 装 BepInEx 5 到游戏根目录，启动一次游戏 |
-| 2 | 把 `WarmSnowDisplay.dll` 放进 `BepInEx\plugins\` |
-| 3 | 进游戏开局，看左上角悬浮窗，F9 切换 |
+| 1 | 装 BepInEx 5（win_x64）到游戏根目录，启动一次游戏 |
+| 2 | Ubuntu/Proton 用户：Steam 启动项加 `WINEDLLOVERRIDES="winhttp=n,b" %command%` |
+| 3 | 把 `WarmSnowDisplay.dll` 放进游戏目录 `BepInEx\plugins\` |
+| 4 | 进游戏开局，看左上角悬浮窗，F9 切换 |
 
 验证要点：
 - 大厅/主菜单里**不应该**显示（因为没开局，`PLAYER_SECT == Sect.None`）。
 - 进局后显示，且受伤时「生命」会变、花蓝魂时「蓝魂」会变。
-- `BepInEx\config\WarmSnowDisplay.cfg` 里可以改默认显示状态和快捷键。
+- 游戏目录 `BepInEx\config\WarmSnowDisplay.cfg` 里可以改默认显示状态和快捷键。
 
 ---
 
