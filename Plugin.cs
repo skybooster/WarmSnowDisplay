@@ -7,7 +7,7 @@ namespace WarmSnowDisplay
 {
     /// <summary>
     /// 暖雪「局内数值显示」mod。
-    /// 进入一局后（选过流派开始游戏时），在屏幕左上角显示角色当前数值。
+    /// 进入一局选过流派开始游戏后，在屏幕左上角显示角色当前数值。
     /// 默认按 F9 显示/隐藏悬浮窗。
     /// </summary>
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
@@ -84,11 +84,8 @@ namespace WarmSnowDisplay
                 $"攻速 {pp.ATTACK_SPEED:0.00}\n" +
                 $"移速 {pp.RUN_SPEED:0.00}\n" +
                 $"无视防御 {pp.IGNORE_DEFENSE:0}\n" +
-                $"吸血 {pp.LIFE_STEAL:0.00}\n" +
-                $"伤害 {pp.INJURY:0}\n" +
-                $"拔剑CD缩减 {pp.DRAW_SWORD_CD_REDUCE:0.00}\n" +
-                $"晕眩抗性 {pp.STUN_RESISTANCE:0.00}\n" +
-                $"蓝魂倍率 {pp.SOULS_RATE:0.00}";
+                $"火伤 {Pct(pp.FIRE_EXTRA_DAMAGE_RATE)}  冰伤 {Pct(pp.ICE_EXTRA_DAMAGE_RATE)}\n" +
+                $"毒伤 {Pct(pp.POISON_EXTRA_DAMAGE_RATE)}  雷伤 {Pct(pp.THUNDER_EXTRA_DAMAGE_RATE)}";
 
             var content = new GUIContent(text);
             Vector2 size = labelStyle.CalcSize(content);
@@ -100,6 +97,15 @@ namespace WarmSnowDisplay
             GUI.color = Color.white;
 
             GUI.Label(new Rect(rect.x + 8, rect.y + 6, size.x, size.y), text, labelStyle);
+        }
+
+        /// <summary>
+        /// 把属性伤害倍率（1.0 为无加成）转成「伤害提升百分比」字符串，例如 +30%、-5%。
+        /// </summary>
+        private static string Pct(float rate)
+        {
+            float pct = (rate - 1f) * 100f;
+            return $"{pct:+0.#;-0.#;0}%";
         }
     }
 
