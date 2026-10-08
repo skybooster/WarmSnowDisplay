@@ -106,51 +106,16 @@ namespace WarmSnowDisplay
         }
 
         /// <summary>
-        /// 懒加载两种字体与样式：汉字宋体、数字 Times New Roman。
+        /// 懒加载两种字体与样式：汉字宋体、数字/英文 Times New Roman。
         /// </summary>
         private void EnsureStyles()
         {
             if (textStyle != null)
                 return;
 
-            // 优先用游戏自带字体兜底，保证中文一定能显示
-            Font gameFont = null;
-            try
-            {
-                var loc = Localization.Instance;
-                if (loc != null && loc.CurrentLangAsset != null)
-                    gameFont = loc.CurrentLangAsset.textFont;
-            }
-            catch { }
-
-            Font cjkFont = CreateFont(
-                new[] { "SimSun", "NSimSun", "MingLiU", "PMingLiU", "Noto Serif CJK SC", "STSong" },
-                gameFont);
-            Font numFont = CreateFont(
-                new[] { "Times New Roman", "Liberation Serif", "Nimbus Roman", "Georgia" },
-                gameFont ?? cjkFont);
-
-            textStyle = MakeStyle(cjkFont);
-            numberStyle = MakeStyle(numFont);
+            textStyle = MakeStyle(Font.CreateDynamicFontFromOSFont("SimSun", 24));
+            numberStyle = MakeStyle(Font.CreateDynamicFontFromOSFont("Times New Roman", 24));
             lineHeight = Mathf.Max(textStyle.lineHeight, numberStyle.lineHeight) + 2f;
-        }
-
-        /// <summary>
-        /// 按候选名依次尝试加载系统字体，全部失败则用 fallback。
-        /// </summary>
-        private static Font CreateFont(string[] names, Font fallback)
-        {
-            foreach (var n in names)
-            {
-                try
-                {
-                    var f = Font.CreateDynamicFontFromOSFont(n, 24);
-                    if (f != null)
-                        return f;
-                }
-                catch { }
-            }
-            return fallback;
         }
 
         private static GUIStyle MakeStyle(Font font)
