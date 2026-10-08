@@ -1,6 +1,10 @@
 # 暖雪 · 局内数值显示
 
+> English version: [README.en.md](./README.en.md)
+
 给《暖雪》（Warm Snow）用的 BepInEx 插件：进入一局后，在屏幕左上角实时显示角色当前数值。默认按 **F9** 开关悬浮窗。
+
+这只是一个简单的mod。
 
 ## 功能
 
