@@ -16,7 +16,11 @@ namespace WarmSnowDisplay
         private ConfigEntry<bool> showOverlay;
         private ConfigEntry<KeyboardShortcut> toggleKey;
 
-        private GUIStyle labelStyle;
+        // 两种字体分别画「汉字」和「数字/符号」：
+        // 汉字用宋体（SimSun），数字用 Times New Roman（罗马新时代）
+        private GUIStyle textStyle;
+        private GUIStyle numberStyle;
+        private float lineHeight;
 
         /// <summary>
         /// 插件加载时由 BepInEx 调用一次，做初始化工作。
@@ -66,37 +70,145 @@ namespace WarmSnowDisplay
 
             var pp = player.playerParameter;
 
-            if (labelStyle == null)
+            EnsureStyles();
+
+            string[] lines =
             {
-                labelStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 16,
-                    fontStyle = FontStyle.Bold,
-                };
-                labelStyle.normal.textColor = Color.white;
-            }
+                $"生命 {pp.HP:0} / {pp.MAX_HP:0}",
+                $"蓝魂 {player.Souls}    红魂 {player.RedSouls}",
+                $"攻击 {pp.ATK:0}（近战 {pp.ATK_MEELE:0} + 飞剑 {pp.ATK_BLADEBOLT:0}）",
+                $"防御 {pp.DEFENSE:0}",
+                $"攻速 {pp.ATTACK_SPEED:0.00}",
+                $"移速 {pp.RUN_SPEED:0.00}",
+                $"无视防御 {pp.IGNORE_DEFENSE:0}",
+                $"火伤 {Pct(pp.FIRE_EXTRA_DAMAGE_RATE)}  冰伤 {Pct(pp.ICE_EXTRA_DAMAGE_RATE)}",
+                $"毒伤 {Pct(pp.POISON_EXTRA_DAMAGE_RATE)}  雷伤 {Pct(pp.THUNDER_EXTRA_DAMAGE_RATE)}",
+            };
 
-            string text =
-                $"生命 {pp.HP:0} / {pp.MAX_HP:0}\n" +
-                $"蓝魂 {player.Souls}    红魂 {player.RedSouls}\n" +
-                $"攻击 {pp.ATK:0}（近战 {pp.ATK_MEELE:0} + 飞剑 {pp.ATK_BLADEBOLT:0}）\n" +
-                $"防御 {pp.DEFENSE:0}\n" +
-                $"攻速 {pp.ATTACK_SPEED:0.00}\n" +
-                $"移速 {pp.RUN_SPEED:0.00}\n" +
-                $"无视防御 {pp.IGNORE_DEFENSE:0}\n" +
-                $"火伤 {Pct(pp.FIRE_EXTRA_DAMAGE_RATE)}  冰伤 {Pct(pp.ICE_EXTRA_DAMAGE_RATE)}\n" +
-                $"毒伤 {Pct(pp.POISON_EXTRA_DAMAGE_RATE)}  雷伤 {Pct(pp.THUNDER_EXTRA_DAMAGE_RATE)}";
+            // 计算整块文本的宽度/高度，再画半透明底
+            float maxWidth = 0f;
+            foreach (var line in lines)
+                maxWidth = Mathf.Max(maxWidth, MeasureLine(line));
 
-            var content = new GUIContent(text);
-            Vector2 size = labelStyle.CalcSize(content);
-            var rect = new Rect(10, 10, size.x + 16, size.y + 12);
+            var rect = new Rect(10, 10, maxWidth + 16, lines.Length * lineHeight + 12);
 
             // 半透明黑底，让文字在任何场景下都可读
             GUI.color = new Color(0f, 0f, 0f, 0.5f);
             GUI.Box(rect, GUIContent.none);
             GUI.color = Color.white;
 
-            GUI.Label(new Rect(rect.x + 8, rect.y + 6, size.x, size.y), text, labelStyle);
+            float y = rect.y + 6;
+            foreach (var line in lines)
+            {
+                DrawLine(line, rect.x + 8, y);
+                y += lineHeight;
+            }
+        }
+
+        /// <summary>
+        /// 懒加载两种字体与样式：汉字宋体、数字 Times New Roman。
+        /// </summary>
+        private void EnsureStyles()
+        {
+            if (textStyle != null)
+                return;
+
+            // 优先用游戏自带字体兜底，保证中文一定能显示
+            Font gameFont = null;
+            try
+            {
+                var loc = Localization.Instance;
+                if (loc != null && loc.CurrentLangAsset != null)
+                    gameFont = loc.CurrentLangAsset.textFont;
+            }
+            catch { }
+
+            Font cjkFont = CreateFont(
+                new[] { "SimSun", "NSimSun", "MingLiU", "PMingLiU", "Noto Serif CJK SC", "STSong" },
+                gameFont);
+            Font numFont = CreateFont(
+                new[] { "Times New Roman", "Liberation Serif", "Nimbus Roman", "Georgia" },
+                gameFont ?? cjkFont);
+
+            textStyle = MakeStyle(cjkFont);
+            numberStyle = MakeStyle(numFont);
+            lineHeight = Mathf.Max(textStyle.lineHeight, numberStyle.lineHeight) + 2f;
+        }
+
+        /// <summary>
+        /// 按候选名依次尝试加载系统字体，全部失败则用 fallback。
+        /// </summary>
+        private static Font CreateFont(string[] names, Font fallback)
+        {
+            foreach (var n in names)
+            {
+                try
+                {
+                    var f = Font.CreateDynamicFontFromOSFont(n, 24);
+                    if (f != null)
+                        return f;
+                }
+                catch { }
+            }
+            return fallback;
+        }
+
+        private static GUIStyle MakeStyle(Font font)
+        {
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 24,
+                fontStyle = FontStyle.Bold,
+            };
+            style.normal.textColor = Color.white;
+            if (font != null)
+                style.font = font;
+            return style;
+        }
+
+        /// <summary>计算一行文本（分段后）的总宽度。</summary>
+        private float MeasureLine(string line)
+        {
+            float w = 0f;
+            int start = 0;
+            for (int i = 0; i <= line.Length; i++)
+            {
+                if (i == line.Length || IsCjk(line[i]) != IsCjk(line[start]))
+                {
+                    string seg = line.Substring(start, i - start);
+                    var style = IsCjk(line[start]) ? textStyle : numberStyle;
+                    w += style.CalcSize(new GUIContent(seg)).x;
+                    start = i;
+                }
+            }
+            return w;
+        }
+
+        /// <summary>绘制一行文本：汉字用宋体，数字/符号用 Times New Roman。</summary>
+        private void DrawLine(string line, float x, float y)
+        {
+            int start = 0;
+            for (int i = 0; i <= line.Length; i++)
+            {
+                if (i == line.Length || IsCjk(line[i]) != IsCjk(line[start]))
+                {
+                    string seg = line.Substring(start, i - start);
+                    var style = IsCjk(line[start]) ? textStyle : numberStyle;
+                    var content = new GUIContent(seg);
+                    float w = style.CalcSize(content).x;
+                    GUI.Label(new Rect(x, y, w + 2, lineHeight), content, style);
+                    x += w;
+                    start = i;
+                }
+            }
+        }
+
+        /// <summary>是否为汉字/全角字符（这些用宋体显示）。</summary>
+        private static bool IsCjk(char c)
+        {
+            return (c >= '\u2E80' && c <= '\u9FFF')   // CJK 部首 + 汉字
+                || (c >= '\uF900' && c <= '\uFAFF')    // CJK 兼容汉字
+                || (c >= '\uFF00' && c <= '\uFFEF');   // 全角字符（全角括号等）
         }
 
         /// <summary>
