@@ -6,18 +6,28 @@
 
 - 实时显示：生命、蓝魂 / 红魂、攻击（近战 + 飞剑）、防御、攻速、移速、无视防御
 - 显示火 / 冰 / 毒 / 雷四种属性伤害的**提升百分比**
-- 汉字使用宋体（SimSun）、数字与英文使用 Times New Roman
 - 显示开关与快捷键可通过 BepInEx 配置文件调整
+
+## 如果大家比较懒的话也可以直接将压缩包解压缩到游戏根目录位置
+
+Ubuntu用户须添加 Steam 启动项
+```
+WINEDLLOVERRIDES="winhttp=n,b" %command%
+```
+
+windows用户直接开始游戏即可。
+
+## 想自己动手的看下面的内容
 
 ## 安装
 
 1. 下载 [BepInEx 5](https://github.com/BepInEx/BepInEx/releases/latest) 的 **Windows x64** 版
-   （`BepInEx_win_x64_5.x.x.zip`，不要下 6.0 pre 版本，也不要下 linux 版），
+   （`BepInEx_win_x64_5.x.x.zip`，不要下 6.0 pre 版本），
    解压到游戏根目录，使 `winhttp.dll`、`doorstop_config.ini`、`BepInEx\` 与游戏 exe 同一层。
 2. 把编译好的 `WarmSnowDisplay.dll` 放进游戏目录下的 `BepInEx\plugins\`。
 3. 启动游戏进一局，左上角出现悬浮窗；按 F9 开关。
 
-> **Ubuntu / Proton**：游戏进程是 Windows 进程，BepInEx 同样装 win_x64 版。
+> **Ubuntu用户在Proton兼容层游玩时**：游戏进程是 Windows 进程，BepInEx 同样装 win_x64 版。
 > 另外需在 Steam 给暖雪设置启动项，否则 Wine 不会加载 BepInEx：
 >
 > ```
@@ -33,12 +43,11 @@
 - **Ubuntu**：
 
   ```bash
-  sudo apt install mono-mcs   # 如未安装
+  sudo apt install mono-mcs   # 如未安装 mono-mcs
   ./build.sh                  # 生成 bin/WarmSnowDisplay.dll
   ```
 
-- **Windows**：用 Visual Studio 打开 `WarmSnowDisplay.csproj`，Release 生成，
-  产物在 `bin\Release\WarmSnowDisplay.dll`。
+- **Windows**：用 Visual Studio 打开 `WarmSnowDisplay.csproj`，Release 生成，产物在 `bin\Release\WarmSnowDisplay.dll`。
 
 ## 配置
 
@@ -49,7 +58,7 @@
 | 显示悬浮窗 | 是否显示 | true |
 | 显示开关快捷键 | 切换显示/隐藏 | F9 |
 
-## 目录结构
+## 该插件目录结构
 
 ```
 WarmSnowDisplay/
@@ -63,3 +72,7 @@ WarmSnowDisplay/
 ## 许可
 
 本项目代码可自由使用、修改、分发。游戏自带的 dll 版权归游戏开发商所有，请勿随仓库分发。
+
+## 有问题联系我
+
+yixuanliu@bluemailx.com
